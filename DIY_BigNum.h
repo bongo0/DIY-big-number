@@ -2,6 +2,7 @@
 #define __DIY_BIGNUM_H__
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <memory.h>
 #include <stdio.h>
 #include <math.h>
@@ -106,7 +107,7 @@ int Bign_equals_zero(Bign* bn){
     n1 == n2 return EQUAL
 */
 int Bign_Compare(Bign* n1, Bign* n2){
-    int cap;
+    int cap = n1->size;
     if(n1->size < n2->size){
         for(int i = n2->size-1; i > n1->size-1; i--){
             if(n2->data[i] > 0)
@@ -256,7 +257,7 @@ void Bign_print_hex(Bign* bn){
 
 int Bign_add(Bign* n1, Bign* n2, Bign* result)
 {
-    
+    Bign_zero(result);
     int8_t carry = 0;
     
     for(size_t i = 0; i < result->size; i++){
@@ -270,8 +271,20 @@ int Bign_add(Bign* n1, Bign* n2, Bign* result)
     return carry;
 }
 
-void Bign_sub(Bign* n1, Bign* n2, Bign* result){
-    //TODO
+int Bign_sub(Bign* n1, Bign* n2, Bign* result){
+    
+    Bign_zero(result);
+    int8_t borrow = 0;
+
+    for(size_t i = 0; i < result->size; i++){
+        if(__builtin_sub_overflow(n1->data[i], n2->data[i] + borrow, &(result->data[i]))){
+            borrow = 1;
+        } else {
+            borrow = 0;
+        }
+    }
+    return borrow;
+
 }
 
 int Bign_mult(Bign* n1, Bign* n2, Bign* result){
