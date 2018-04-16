@@ -8,7 +8,7 @@
 #include <string.h>
 
 #ifndef BASE_TYPE
-#define BASE_TYPE unsigned int
+#define BASE_TYPE uint32_t
 #endif
 
 #define TYPE_SIZE sizeof(BASE_TYPE)
@@ -219,7 +219,7 @@ void Bign_to_hexstr(Bign* bn, char* str, int str_size){
         cap = bn->size;
 
     char format[12];
-    sprintf(format,"%%.0%lux",2*TYPE_SIZE);
+    sprintf(format,"%%.0%lulx",2*TYPE_SIZE);
     char tmp[65];
     int j = str_size - 1 - 2*TYPE_SIZE;
     
@@ -242,7 +242,7 @@ void Bign_to_hexstr(Bign* bn, char* str, int str_size){
 /* Prints the number as hexadecimal to the std out */
 void Bign_print_hex(Bign* bn){
     char format[12];
-    sprintf(format,"%%.0%lux ",2*TYPE_SIZE);
+    sprintf(format,"%%.0%lulx ",2*TYPE_SIZE);
 
     for(int i = bn->size-1; i >= 0; i--){
         printf(format,bn->data[i]);
@@ -254,15 +254,27 @@ void Bign_print_hex(Bign* bn){
                 BASIC OPERATIONS
 --------------------------------------------------*/
 
-void Bign_add(Bign* n1, Bign* n2, Bign* result){
-    //TODO
+int Bign_add(Bign* n1, Bign* n2, Bign* result)
+{
+    
+    int8_t carry = 0;
+    
+    for(size_t i = 0; i < result->size; i++){
+        if(__builtin_add_overflow(n1->data[i] + carry, n2->data[i], &(result->data[i]) )){
+            carry = 1;
+        } else {
+            carry = 0;
+        }
+    }
+
+    return carry;
 }
 
 void Bign_sub(Bign* n1, Bign* n2, Bign* result){
     //TODO
 }
 
-void Bign_mult(Bign* n1, Bign* n2, Bign* result){
+int Bign_mult(Bign* n1, Bign* n2, Bign* result){
     //TODO
 }
 
