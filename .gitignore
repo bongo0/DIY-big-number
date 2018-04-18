@@ -1,5 +1,3 @@
-a.out
+*.out
 .vscode
-test
-sqrt
-sqrt_of_2.txt
+*.txt

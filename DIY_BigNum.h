@@ -8,12 +8,32 @@
 #include <math.h>
 #include <string.h>
 
-#ifndef BASE_TYPE
-#define BASE_TYPE uint32_t
+#ifndef BIGN_WORD_SIZE
+    #define BIGN_WORD_SIZE 4
 #endif
 
-#define TYPE_SIZE sizeof(BASE_TYPE)
-#define TYPE_SIZE_BITS (8*sizeof(BASE_TYPE))
+#if (BIGN_WORD_SIZE == 1)
+    //typedef uint8_t BIGN_BASE_TYPE;
+    #define BIGN_BASE_TYPE uint8_t
+    #define BIGN_FORMAT_HEX_OUT "%.2lx "
+#elif (BIGN_WORD_SIZE == 2)
+    //typedef uint16_t BIGN_BASE_TYPE;
+    #define BIGN_BASE_TYPE uint16_t
+    #define BIGN_FORMAT_HEX_OUT "%.4lx "
+#elif (BIGN_WORD_SIZE == 4)
+    //typedef uint32_t BIGN_BASE_TYPE;
+    #define BIGN_BASE_TYPE uint32_t
+    #define BIGN_FORMAT_HEX_OUT "%.8lx "
+#elif (BIGN_WORD_SIZE == 8)
+    //typedef uint64_t BIGN_BASE_TYPE;
+    #define BIGN_BASE_TYPE uint64_t
+    #define BIGN_FORMAT_HEX_OUT "%.16lx "
+#endif
+
+
+
+#define TYPE_SIZE sizeof(BIGN_BASE_TYPE)
+#define TYPE_SIZE_BITS (8*sizeof(BIGN_BASE_TYPE))
 
 #define PUSH_IGNORE_WARNING_WFORMAT _Pragma("GCC diagnostic push")\
                             _Pragma("GCC diagnostic ignored \"-Wformat=\"")
@@ -24,7 +44,7 @@ typedef enum {LESS_THAN,EQUAL,BIGGER_THAN} comparison;
 
 typedef struct _Bign
 {
-    BASE_TYPE* data;
+    BIGN_BASE_TYPE* data;
     size_t size;
 } Bign;
 
@@ -34,7 +54,7 @@ typedef struct _Bign
 
 Bign* Bign_new(size_t sizeof_data){
     Bign* bn = malloc(sizeof(Bign));
-    bn->data = (BASE_TYPE*)calloc(sizeof_data,TYPE_SIZE);
+    bn->data = (BIGN_BASE_TYPE*)calloc(sizeof_data,TYPE_SIZE);
         if(bn->data == NULL)
             perror("alloc fail\n");
     bn->size = sizeof_data;
@@ -42,11 +62,11 @@ Bign* Bign_new(size_t sizeof_data){
 }
 
 void Bign_free_data(Bign* bn){
-    free(bn->data);
+    free((*bn).data);
 }
 
 void Bign_init(Bign* bn, size_t sizeof_data){
-    bn->data = (BASE_TYPE*)calloc(sizeof_data,TYPE_SIZE);
+    bn->data = (BIGN_BASE_TYPE*)calloc(sizeof_data,TYPE_SIZE);
         if(bn->data == NULL)
             perror("alloc fail\n");
     bn->size = sizeof_data;
@@ -58,7 +78,7 @@ void Bign_realloc(Bign* bn, size_t sizeof_data){
 }
 
 void Bign_cpy(Bign* src, Bign* dest){
-    Bign_realloc(dest,src->size);
+    if(src->size != dest->size) Bign_realloc(dest,src->size);
     for(int i = 0; i < src->size; i++)
         dest->data[i] = src->data[i];
 }
@@ -69,7 +89,7 @@ void Bign_cpy(Bign* src, Bign* dest){
 
 /* Substract one from the input number*/
 void Bign_Substract_one(Bign* bn){
-    BASE_TYPE tmp,res;
+    BIGN_BASE_TYPE tmp,res;
 
     for(int i = 0; i < bn->size; i++){
         tmp = bn->data[i];
@@ -82,7 +102,7 @@ void Bign_Substract_one(Bign* bn){
 
 /* Add one to the input number*/
 void Bign_Add_one(Bign* bn){
-    BASE_TYPE tmp,res;
+    BIGN_BASE_TYPE tmp,res;
 
     for(int i = 0; i < bn->size; i++){
         tmp = bn->data[i];
@@ -165,7 +185,7 @@ void Bign_shift_right_words(Bign* n1, Bign* result, int nwords){
 
 /* Sets the number to zero */
 void Bign_zero(Bign* bn){
-    memset(bn->data,0,bn->size*TYPE_SIZE);
+    memset(bn->data,(BIGN_BASE_TYPE)0,bn->size*TYPE_SIZE);
 }
 
 /* Makes a number from int */
@@ -199,7 +219,7 @@ int Bign_to_int(Bign* bn){
 
 /* Read hexadecimal number from string */
 void Bign_from_hexstr(Bign* bn, char* str){
-    BASE_TYPE tmp;
+    BIGN_BASE_TYPE tmp;
     int len = strlen(str)-1;
 
     for(int i = len; i >= 0;i--){
@@ -219,13 +239,13 @@ void Bign_to_hexstr(Bign* bn, char* str, int str_size){
     if(cap > bn->size)
         cap = bn->size;
 
-    char format[12];
-    sprintf(format,"%%.0%lulx",2*TYPE_SIZE);
+    //char format[12];
+    //sprintf(format,"%%.0%lulx",2*TYPE_SIZE);
     char tmp[65];
     int j = str_size - 1 - 2*TYPE_SIZE;
     
     for(int i = 0; i < cap; i++){
-        sprintf(tmp, format, bn->data[i]);
+        sprintf(tmp, BIGN_FORMAT_HEX_OUT, bn->data[i]);
         
         strncpy(&str[j],tmp,2*TYPE_SIZE);
         j -= 2*TYPE_SIZE;
@@ -242,11 +262,11 @@ void Bign_to_hexstr(Bign* bn, char* str, int str_size){
 
 /* Prints the number as hexadecimal to the std out */
 void Bign_print_hex(Bign* bn){
-    char format[12];
-    sprintf(format,"%%.0%lulx ",2*TYPE_SIZE);
-
+    //char format[12];
+    //sprintf(format,"%%.0%lulx ",2*TYPE_SIZE);
+    //printf("format:   %s \n",format);
     for(int i = bn->size-1; i >= 0; i--){
-        printf(format,bn->data[i]);
+        printf(BIGN_FORMAT_HEX_OUT,bn->data[i]);
     }
     printf("\n");
 }
@@ -257,7 +277,7 @@ void Bign_print_hex(Bign* bn){
 
 int Bign_add(Bign* n1, Bign* n2, Bign* result)
 {
-    Bign_zero(result);
+    //Bign_zero(result); not needed
     int8_t carry = 0;
     
     for(size_t i = 0; i < result->size; i++){
@@ -273,7 +293,7 @@ int Bign_add(Bign* n1, Bign* n2, Bign* result)
 
 int Bign_sub(Bign* n1, Bign* n2, Bign* result){
     
-    Bign_zero(result);
+    //Bign_zero(result); not needed
     int8_t borrow = 0;
 
     for(size_t i = 0; i < result->size; i++){
@@ -396,6 +416,52 @@ int Bign_lessOrEquals(Bign* n1, Bign* n2){
 /*      n1 >= n2     */
 int Bign_biggerOrEquals(Bign* n1, Bign* n2){
     return (Bign_equals(n1,n2) || Bign_biggerThan(n1,n2));
+}
+
+
+/*--------------------------------------------------
+                MATH OPERATIONS
+--------------------------------------------------*/
+
+// rip with WORD_SIZE 1,2,8..
+int Bign_isqrt(Bign *num, Bign *res){
+    // temps
+    Bign bit, res_plus_bit;
+    Bign_init(&bit, num->size);
+    Bign_init(&res_plus_bit, num->size);
+
+    // resize if needed
+    if(num->size != res->size) Bign_realloc(res, num->size);
+    // zero out the result
+    Bign_zero(res);
+
+    //#### ALGORITHM ####
+    Bign_from_int(&bit,1);
+    Bign_shift_left(&bit,&bit, (num->size - 1)*TYPE_SIZE_BITS + TYPE_SIZE_BITS - 2);
+    
+    while(Bign_biggerThan(&bit, num)){
+        Bign_shift_right(&bit,&bit,2);
+    }
+
+    while(!Bign_equals_zero(&bit)){
+        Bign_add(res,&bit, &res_plus_bit);
+    
+        if(Bign_biggerOrEquals(num, &res_plus_bit)){
+            Bign_sub(num, &res_plus_bit, num);
+            Bign_shift_right_one(res,res);
+            Bign_add(res,&bit,res);
+        }else{
+            Bign_shift_right_one(res,res);
+        }
+
+        Bign_shift_right(&bit,&bit,2);
+    }
+    //###################
+
+    //free temps // crash with word size 1,2
+    Bign_free_data(&bit);
+    Bign_free_data(&res_plus_bit);
+    return 1;
 }
 
 #endif //__DIY_BIGNUM_H__
