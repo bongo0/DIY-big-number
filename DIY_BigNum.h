@@ -8,29 +8,29 @@
 #include <math.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+    #include <intrin.h>
+#else
+    #include <x86intrin.h>
+#endif
+
 #ifndef BIGN_WORD_SIZE
     #define BIGN_WORD_SIZE 4
 #endif
 
 #if (BIGN_WORD_SIZE == 1)
-    //typedef uint8_t BIGN_BASE_TYPE;
     #define BIGN_BASE_TYPE uint8_t
-    #define BIGN_FORMAT_HEX_OUT "%.2lx "
+    #define BIGN_FORMAT_HEX_OUT "%.2lx"
 #elif (BIGN_WORD_SIZE == 2)
-    //typedef uint16_t BIGN_BASE_TYPE;
     #define BIGN_BASE_TYPE uint16_t
-    #define BIGN_FORMAT_HEX_OUT "%.4lx "
+    #define BIGN_FORMAT_HEX_OUT "%.4lx"
 #elif (BIGN_WORD_SIZE == 4)
-    //typedef uint32_t BIGN_BASE_TYPE;
     #define BIGN_BASE_TYPE uint32_t
-    #define BIGN_FORMAT_HEX_OUT "%.8lx "
+    #define BIGN_FORMAT_HEX_OUT "%.8lx"
 #elif (BIGN_WORD_SIZE == 8)
-    //typedef uint64_t BIGN_BASE_TYPE;
     #define BIGN_BASE_TYPE uint64_t
-    #define BIGN_FORMAT_HEX_OUT "%.16lx "
+    #define BIGN_FORMAT_HEX_OUT "%.16lx"
 #endif
-
-
 
 #define TYPE_SIZE sizeof(BIGN_BASE_TYPE)
 #define TYPE_SIZE_BITS (8*sizeof(BIGN_BASE_TYPE))
@@ -52,32 +52,37 @@ typedef struct _Bign
                 SETUP
 --------------------------------------------------*/
 
-Bign* Bign_new(size_t sizeof_data){
+Bign* Bign_new(size_t sizeof_data)
+{
     Bign* bn = malloc(sizeof(Bign));
-    bn->data = (BIGN_BASE_TYPE*)calloc(sizeof_data,TYPE_SIZE);
+    bn->data = calloc(sizeof_data,TYPE_SIZE);
         if(bn->data == NULL)
             perror("alloc fail\n");
     bn->size = sizeof_data;
     return bn;
 }
 
-void Bign_free_data(Bign* bn){
-    free((*bn).data);
+void Bign_free_data(Bign* bn)
+{
+    free(bn->data);
 }
 
-void Bign_init(Bign* bn, size_t sizeof_data){
-    bn->data = (BIGN_BASE_TYPE*)calloc(sizeof_data,TYPE_SIZE);
+void Bign_init(Bign* bn, size_t sizeof_data)
+{
+    bn->data = calloc(sizeof_data,TYPE_SIZE);
         if(bn->data == NULL)
             perror("alloc fail\n");
     bn->size = sizeof_data;
 }
 
-void Bign_realloc(Bign* bn, size_t sizeof_data){
+void Bign_realloc(Bign* bn, size_t sizeof_data)
+{
     bn->data = realloc(bn->data, sizeof_data*TYPE_SIZE);
     bn->size = sizeof_data;
 }
 
-void Bign_cpy(Bign* src, Bign* dest){
+void Bign_cpy(Bign* src, Bign* dest)
+{
     if(src->size != dest->size) Bign_realloc(dest,src->size);
     for(int i = 0; i < src->size; i++)
         dest->data[i] = src->data[i];
@@ -88,7 +93,8 @@ void Bign_cpy(Bign* src, Bign* dest){
 --------------------------------------------------*/
 
 /* Substract one from the input number*/
-void Bign_Substract_one(Bign* bn){
+void Bign_Substract_one(Bign* bn)
+{
     BIGN_BASE_TYPE tmp,res;
 
     for(int i = 0; i < bn->size; i++){
@@ -101,7 +107,8 @@ void Bign_Substract_one(Bign* bn){
 }
 
 /* Add one to the input number*/
-void Bign_Add_one(Bign* bn){
+void Bign_Add_one(Bign* bn)
+{
     BIGN_BASE_TYPE tmp,res;
 
     for(int i = 0; i < bn->size; i++){
@@ -113,7 +120,8 @@ void Bign_Add_one(Bign* bn){
     }
 }
 
-int Bign_equals_zero(Bign* bn){
+int Bign_equals_zero(Bign* bn)
+{
     for(int i = 0; i < bn->size; i++){
         if(bn->data[i])
             return 0;
@@ -126,7 +134,8 @@ int Bign_equals_zero(Bign* bn){
     n1 < n2 return LESS_THAN
     n1 == n2 return EQUAL
 */
-int Bign_Compare(Bign* n1, Bign* n2){
+int Bign_Compare(Bign* n1, Bign* n2)
+{
     int cap = n1->size;
     if(n1->size < n2->size){
         for(int i = n2->size-1; i > n1->size-1; i--){
@@ -151,20 +160,23 @@ int Bign_Compare(Bign* n1, Bign* n2){
     return EQUAL;
 }
 
-void Bign_shift_left_one(Bign* n1, Bign* result){
+void Bign_shift_left_one(Bign* n1, Bign* result)
+{
     for(int i = result->size-1; i>0; i--)
         result->data[i] = (n1->data[i] << 1) | (n1->data[i-1] >> (TYPE_SIZE_BITS-1));
     result->data[0] = n1->data[0] << 1;
 }
 
-void Bign_shift_right_one(Bign* n1, Bign* result){
+void Bign_shift_right_one(Bign* n1, Bign* result)
+{
     for(int i = 0; i < result->size-1; i++)
         result->data[i] = (n1->data[i] >> 1) | (n1->data[i+1] << (TYPE_SIZE_BITS-1));
     result->data[result->size-1] = n1->data[result->size-1] >> 1;
 }
 
 /* Bit shift left n words (TYPE_SIZE_BITS)*/
-void Bign_shift_left_words(Bign* n1, Bign* result, int nwords){
+void Bign_shift_left_words(Bign* n1, Bign* result, int nwords)
+{
     for(int i = result->size-1; i >= nwords; i--)
         result->data[i] = n1->data[i-nwords];
     for(int i = 0; i<nwords; i++)
@@ -172,7 +184,8 @@ void Bign_shift_left_words(Bign* n1, Bign* result, int nwords){
 }
 
 /* Bit shift right n words (TYPE_SIZE_BITS) */
-void Bign_shift_right_words(Bign* n1, Bign* result, int nwords){
+void Bign_shift_right_words(Bign* n1, Bign* result, int nwords)
+{
     for(int i = 0; i <= result->size-1-nwords; i++)
         result->data[i] = n1->data[i+nwords];
     for(int i = result->size-nwords; i < result->size; i++)
@@ -184,12 +197,14 @@ void Bign_shift_right_words(Bign* n1, Bign* result, int nwords){
 --------------------------------------------------*/
 
 /* Sets the number to zero */
-void Bign_zero(Bign* bn){
+void Bign_zero(Bign* bn)
+{
     memset(bn->data,(BIGN_BASE_TYPE)0,bn->size*TYPE_SIZE);
 }
 
 /* Makes a number from int */
-void Bign_from_int(Bign* bn, unsigned int n){
+void Bign_from_int(Bign* bn, unsigned int n)
+{
     Bign_zero(bn);
     switch(sizeof(int)/TYPE_SIZE){
         case 4:
@@ -202,14 +217,15 @@ void Bign_from_int(Bign* bn, unsigned int n){
             bn->data[0] = (n & 0xffff);
             bn->data[1] = (n & 0xffff0000)>>16;
             break;
-        case 1:
+        default:
             bn->data[0] = n;
             break;
     }
 }
 
 /* Returns the number as int */
-int Bign_to_int(Bign* bn){
+int Bign_to_int(Bign* bn)
+{
     int n = 0;
     for(int i = 0; i < sizeof(int)/TYPE_SIZE; i++){
         n += bn->data[i] << i*TYPE_SIZE_BITS;
@@ -218,7 +234,8 @@ int Bign_to_int(Bign* bn){
 }
 
 /* Read hexadecimal number from string */
-void Bign_from_hexstr(Bign* bn, char* str){
+void Bign_from_hexstr(Bign* bn, char* str)
+{
     BIGN_BASE_TYPE tmp;
     int len = strlen(str)-1;
 
@@ -232,7 +249,8 @@ void Bign_from_hexstr(Bign* bn, char* str){
 }
 
 /* Write the number as hexadecimal to string thats length is str_size */
-void Bign_to_hexstr(Bign* bn, char* str, int str_size){
+void Bign_to_hexstr(Bign* bn, char* str, int str_size)
+{
     memset(str,'0',sizeof(char)*str_size);
     int cap = ceil(str_size/(float)(TYPE_SIZE*2));
     
@@ -261,7 +279,8 @@ void Bign_to_hexstr(Bign* bn, char* str, int str_size){
 }
 
 /* Prints the number as hexadecimal to the std out */
-void Bign_print_hex(Bign* bn){
+void Bign_print_hex(Bign* bn)
+{
     //char format[12];
     //sprintf(format,"%%.0%lulx ",2*TYPE_SIZE);
     //printf("format:   %s \n",format);
@@ -275,48 +294,91 @@ void Bign_print_hex(Bign* bn){
                 BASIC OPERATIONS
 --------------------------------------------------*/
 
-int Bign_add(Bign* n1, Bign* n2, Bign* result)
+uint8_t Bign_add(Bign* n1, Bign* n2, Bign* result)
 {
-    //Bign_zero(result); not needed
-    int8_t carry = 0;
-    
+    int8_t carry = 0;    
     for(size_t i = 0; i < result->size; i++){
-        if(__builtin_add_overflow(n1->data[i] + carry, n2->data[i], &(result->data[i]) )){
-            carry = 1;
-        } else {
-            carry = 0;
-        }
+        // dont know if there is _addcarry_u8 /_u16 on gcc
+        #if (BIGN_WORD_SIZE == 1)
+            #ifdef _MSC_VER
+                carry = _addcarry_u8(carry,n1->data[i], n2->data[i], &(result->data[i]));
+            #else
+                if(__builtin_add_overflow(n1->data[i] + carry, n2->data[i], &(result->data[i]) )){
+                    carry = 1;
+                } else {
+                    carry = 0;
+                }
+            #endif
+        #elif (BIGN_WORD_SIZE == 2)
+            #ifdef _MSC_VER
+                carry = _addcarry_u16(carry,n1->data[i], n2->data[i], &(result->data[i]));
+            #else
+                if(__builtin_add_overflow(n1->data[i] + carry, n2->data[i], &(result->data[i]) )){
+                    carry = 1;
+                } else {
+                    carry = 0;
+                }
+            #endif
+        #elif (BIGN_WORD_SIZE == 4)
+            carry = _addcarry_u32(carry,n1->data[i], n2->data[i], &(result->data[i]));
+        #elif (BIGN_WORD_SIZE == 8)
+            carry = _addcarry_u64(carry,n1->data[i], n2->data[i], &(result->data[i]));
+        #endif
     }
-
     return carry;
 }
 
-int Bign_sub(Bign* n1, Bign* n2, Bign* result){
-    
-    //Bign_zero(result); not needed
-    int8_t borrow = 0;
-
+uint8_t Bign_sub(Bign* n1, Bign* n2, Bign* result)
+{    
+    uint8_t borrow = 0;
     for(size_t i = 0; i < result->size; i++){
-        if(__builtin_sub_overflow(n1->data[i], n2->data[i] + borrow, &(result->data[i]))){
-            borrow = 1;
-        } else {
-            borrow = 0;
-        }
+        // dont know if there is _subborrow_u8 /_u16 on gcc 
+        #if (BIGN_WORD_SIZE == 1)
+            #ifdef _MSC_VER
+                borrow = _subborrow_u8(borrow,n2->data[i], n1->data[i], &(result->data[i]));
+            #else
+                if(__builtin_sub_overflow(n1->data[i], n2->data[i] + borrow, &(result->data[i]))){
+                    borrow = 1;
+                } else {
+                    borrow = 0;
+                }
+            #endif    
+        
+        #elif (BIGN_WORD_SIZE == 2)
+            #ifdef _MSC_VER
+                borrow = _subborrow_u16(borrow,n2->data[i], n1->data[i], &(result->data[i]));
+            #else
+                if(__builtin_sub_overflow(n1->data[i], n2->data[i] + borrow, &(result->data[i]))){
+                    borrow = 1;
+                } else {
+                    borrow = 0;
+                }
+            #endif
+        #elif (BIGN_WORD_SIZE == 4)
+            borrow = _subborrow_u32(borrow,n2->data[i], n1->data[i], &(result->data[i]));
+        #elif (BIGN_WORD_SIZE == 8)
+            borrow = _subborrow_u64(borrow,n2->data[i], n1->data[i], &(result->data[i]));
+        #endif
     }
     return borrow;
-
 }
 
-int Bign_mult(Bign* n1, Bign* n2, Bign* result){
+uint8_t Bign_mult(Bign* n1, Bign* n2, Bign* result)
+{
     //TODO
+    return 0;
 }
 
-void Bign_div(Bign* n1, Bign* n2, Bign* result){
-    //TODO    
+uint8_t Bign_div(Bign* n1, Bign* n2, Bign* result)
+{
+    //TODO   
+    return 0; 
 }
 
-void Bign_mod(Bign* n1, Bign* n2, Bign* result){
+uint8_t Bign_mod(Bign* n1, Bign* n2, Bign* result)
+{
     //TODO
+    return 0;
 }
 
 
@@ -324,7 +386,8 @@ void Bign_mod(Bign* n1, Bign* n2, Bign* result){
                 BIT OPERATIONS
 --------------------------------------------------*/
 
-void Bign_shift_left(Bign* n1, Bign* result, const int shift_bits){
+void Bign_shift_left(Bign* n1, Bign* result, const int shift_bits)
+{
     int shift_words = shift_bits / TYPE_SIZE_BITS;
     int bits = shift_bits;
 
@@ -343,7 +406,8 @@ void Bign_shift_left(Bign* n1, Bign* result, const int shift_bits){
     result->data[0] <<= bits;
 }
 
-void Bign_shift_right(Bign* n1, Bign* result, int shift_bits){
+void Bign_shift_right(Bign* n1, Bign* result, int shift_bits)
+{
     int shift_words = shift_bits / TYPE_SIZE_BITS;
     int bits = shift_bits;
 
@@ -361,7 +425,8 @@ void Bign_shift_right(Bign* n1, Bign* result, int shift_bits){
     result->data[result->size-1] >>= bits;
 }
 
-void Bign_and(Bign* n1, Bign* n2, Bign* result){
+void Bign_and(Bign* n1, Bign* n2, Bign* result)
+{
     int cap = (n1->size < n2->size ? n1->size : n2->size);
     cap = (cap < result->size ? cap : result->size);
     
@@ -371,7 +436,8 @@ void Bign_and(Bign* n1, Bign* n2, Bign* result){
 
 }
 
-void Bign_or(Bign* n1, Bign* n2, Bign* result){
+void Bign_or(Bign* n1, Bign* n2, Bign* result)
+{
     int cap = (n1->size < n2->size ? n1->size : n2->size);
     cap = (cap < result->size ? cap : result->size);
     
@@ -380,7 +446,8 @@ void Bign_or(Bign* n1, Bign* n2, Bign* result){
     }
 }
 
-void Bign_xor(Bign* n1, Bign* n2, Bign* result){
+void Bign_xor(Bign* n1, Bign* n2, Bign* result)
+{
         int cap = (n1->size < n2->size ? n1->size : n2->size);
     cap = (cap < result->size ? cap : result->size);
     
@@ -394,27 +461,32 @@ void Bign_xor(Bign* n1, Bign* n2, Bign* result){
 --------------------------------------------------*/
 
 /*      n1 < n2     */
-int Bign_lessThan(Bign* n1, Bign* n2){
+int Bign_lessThan(Bign* n1, Bign* n2)
+{
     return (Bign_Compare(n1,n2) == LESS_THAN);
 }
 
 /*      n1 > n2     */
-int Bign_biggerThan(Bign* n1, Bign* n2){
+int Bign_biggerThan(Bign* n1, Bign* n2)
+{
     return (Bign_Compare(n1,n2) == BIGGER_THAN);
 }
 
 /*      n1 == n2     */
-int Bign_equals(Bign* n1, Bign* n2){
+int Bign_equals(Bign* n1, Bign* n2)
+{
     return (Bign_Compare(n1,n2) == EQUAL);
 }
 
 /*      n1 <= n2     */
-int Bign_lessOrEquals(Bign* n1, Bign* n2){
+int Bign_lessOrEquals(Bign* n1, Bign* n2)
+{
     return (Bign_equals(n1,n2) || Bign_lessThan(n1,n2));
 }
 
 /*      n1 >= n2     */
-int Bign_biggerOrEquals(Bign* n1, Bign* n2){
+int Bign_biggerOrEquals(Bign* n1, Bign* n2)
+{
     return (Bign_equals(n1,n2) || Bign_biggerThan(n1,n2));
 }
 
@@ -423,8 +495,9 @@ int Bign_biggerOrEquals(Bign* n1, Bign* n2){
                 MATH OPERATIONS
 --------------------------------------------------*/
 
-// rip with WORD_SIZE 1,2,8..
-int Bign_isqrt(Bign *num, Bign *res){
+
+int Bign_isqrt(Bign *num, Bign *res)
+{
     // temps
     Bign bit, res_plus_bit;
     Bign_init(&bit, num->size);
