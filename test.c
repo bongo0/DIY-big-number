@@ -7,6 +7,25 @@
 #define BIGN_WORD_SIZE 4
 #include "DIY_BigNum.h"
 
+#include <math.h>
+char* Bign_to_decimal_str(const Bign *bn)
+{
+    // get number of digits
+    int digits = floor(bn->size*TYPE_SIZE_BITS*log10(2)) + 1;
+    printf("digits: %d\n",digits);
+
+    Bign tmp;
+    Bign_init(&tmp,0);
+    Bign_cpy(bn,&tmp);
+
+
+
+    char *result = malloc(digits*sizeof(char));
+    memset(result,'0',sizeof(result));
+    
+    Bign_free_data(&tmp);
+    return NULL;
+}
 
 int main(){
 
@@ -33,6 +52,8 @@ int main(){
 
     printf("n1 + n2: \n");
     Bign_print_hex(&n3);
+
+    Bign_to_decimal_str(&n1);
 
     Bign_free_data(&n1);
     Bign_free_data(&n2);
