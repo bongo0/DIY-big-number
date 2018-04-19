@@ -236,16 +236,18 @@ int Bign_to_int(Bign* bn)
 /* Read hexadecimal number from string */
 void Bign_from_hexstr(Bign* bn, char* str)
 {
+
     BIGN_BASE_TYPE tmp;
     int len = strlen(str)-1;
+    int cap = len - bn->size * TYPE_SIZE * 2;
+    if(cap < 0) cap = 0;
 
-    for(int i = len; i >= 0;i--){
+    for(int i = len; i >= cap;--i){
         tmp=0;
-        PUSH_IGNORE_WARNING_WFORMAT;
         sscanf(&str[i],"%1hhx",&tmp);
-        POP_IGNORE_WARNING;
-        bn->data[(len-i)/(2*TYPE_SIZE)]+=tmp<<((len-i)%(2*TYPE_SIZE)*4);
+        bn->data[(len-i)/(2*TYPE_SIZE)] += tmp << ((len-i)%(2*TYPE_SIZE)*4);
     }
+
 }
 
 /* Write the number as hexadecimal to string thats length is str_size */
