@@ -533,7 +533,6 @@ int Bign_isqrt(Bign *num, Bign *res)
     }
     //###################
 
-    //free temps // crash with word size 1,2
     Bign_free_data(&bit);
     Bign_free_data(&res_plus_bit);
     return 1;
