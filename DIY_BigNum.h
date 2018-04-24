@@ -19,17 +19,25 @@
 #endif
 
 #if (BIGN_WORD_SIZE == 1)
-    #define BIGN_BASE_TYPE uint8_t
-    #define BIGN_FORMAT_HEX_OUT "%.2lx"
+    #define BIGN_BASE_TYPE          uint8_t
+    #define BIGN_FORMAT_HEX_OUT     "%.2lx"
+    #define BIGN_BASE_TYPE_HIGH_BIT 0x80
+    #define BIGN_BASE_TYPE_MAX      0xff
 #elif (BIGN_WORD_SIZE == 2)
-    #define BIGN_BASE_TYPE uint16_t
-    #define BIGN_FORMAT_HEX_OUT "%.4lx"
+    #define BIGN_BASE_TYPE          uint16_t
+    #define BIGN_FORMAT_HEX_OUT     "%.4lx"
+    #define BIGN_BASE_TYPE_HIGH_BIT 0x8000
+    #define BIGN_BASE_TYPE_MAX      0xffff
 #elif (BIGN_WORD_SIZE == 4)
-    #define BIGN_BASE_TYPE uint32_t
-    #define BIGN_FORMAT_HEX_OUT "%.8lx"
+    #define BIGN_BASE_TYPE          uint32_t
+    #define BIGN_FORMAT_HEX_OUT     "%.8lx"
+    #define BIGN_BASE_TYPE_HIGH_BIT 0x80000000
+    #define BIGN_BASE_TYPE_MAX      0xffffffff
 #elif (BIGN_WORD_SIZE == 8)
-    #define BIGN_BASE_TYPE uint64_t
-    #define BIGN_FORMAT_HEX_OUT "%.16lx"
+    #define BIGN_BASE_TYPE          uint64_t
+    #define BIGN_FORMAT_HEX_OUT     "%.16lx"
+    #define BIGN_BASE_TYPE_HIGH_BIT 0x8000000000000000
+    #define BIGN_BASE_TYPE_MAX      0xffffffffffffffff
 #endif
 
 #define TYPE_SIZE sizeof(BIGN_BASE_TYPE)
@@ -83,7 +91,7 @@ void Bign_realloc(Bign* bn, size_t sizeof_data)
 
 void Bign_cpy(Bign* src, Bign* dest)
 {
-    if(src->size != dest->size) Bign_realloc(dest,src->size);
+    if(src->size > dest->size) Bign_realloc(dest,src->size);
     for(int i = 0; i < src->size; i++)
         dest->data[i] = src->data[i];
 }
@@ -251,6 +259,7 @@ void Bign_from_hexstr(Bign* bn, char* str)
 }
 
 /* Write the number as hexadecimal to string thats length is str_size */
+// should redo this
 void Bign_to_hexstr(Bign* bn, char* str, int str_size)
 {
     memset(str,'0',sizeof(char)*str_size);
@@ -267,7 +276,7 @@ void Bign_to_hexstr(Bign* bn, char* str, int str_size)
     for(int i = 0; i < cap; i++){
         sprintf(tmp, BIGN_FORMAT_HEX_OUT, bn->data[i]);
         
-        strncpy(&str[j],tmp,2*TYPE_SIZE);
+        strncpy(&str[j],tmp,2*TYPE_SIZE); // probably bad idea
         j -= 2*TYPE_SIZE;
     }
 
@@ -280,16 +289,130 @@ void Bign_to_hexstr(Bign* bn, char* str, int str_size)
 
 }
 
+char* Bign_to_decimal_str(const Bign *bn)
+{
+    
+    //space for Double dabble
+    const size_t bits = bn->size*TYPE_SIZE_BITS;
+    int digits = floor(bits*log10(2)) + 1;
+    size_t space = ceil(( bits + 4*digits ) / (double)TYPE_SIZE_BITS);
+
+    //printf("space %d\n",space);
+
+    Bign tmp;
+    Bign_init(&tmp, bn->size + space);
+    Bign_cpy(bn,&tmp);
+    
+    for(size_t i = 0; i < bits; i++){
+        for(int k = bn->size;k<tmp.size;k++){
+            if( (tmp.data[k] & 0x0f) > 4      ) (tmp.data[k]) += 3; // 0000 0011 low bits
+            if( (tmp.data[k] & 0xf0) > (4<<4) ) (tmp.data[k]) += (3<<4); // 0011 0000 high bits etc..
+        #if (BIGN_WORD_SIZE > 1)
+            if( (tmp.data[k] & 0x0f00) > (4<<8) ) (tmp.data[k]) += (3<<8);
+            if( (tmp.data[k] & 0xf000) > (4<<12)) (tmp.data[k]) += (3<<12); 
+        #endif
+        #if (BIGN_WORD_SIZE > 2)
+            if( (tmp.data[k] & 0x000f0000) > (4<<16)    ) (tmp.data[k]) += (3<<16);
+            if( (tmp.data[k] & 0x00f00000) > (4<<20)    ) (tmp.data[k]) += (3<<20);
+            if( (tmp.data[k] & 0x0f000000) > (4<<24)    ) (tmp.data[k]) += (3<<24);
+            if( (tmp.data[k] & 0xf0000000) > (4<<28)    ) (tmp.data[k]) += (3<<28); 
+        #endif
+        #if (BIGN_WORD_SIZE > 4)
+            if( (tmp.data[k] & 0x0000000f00000000) > (4l<<32)) (tmp.data[k]) += (3l<<32);
+            if( (tmp.data[k] & 0x000000f000000000) > (4l<<36)) (tmp.data[k]) += (3l<<36);
+            if( (tmp.data[k] & 0x00000f0000000000) > (4l<<40)) (tmp.data[k]) += (3l<<40);
+            if( (tmp.data[k] & 0x0000f00000000000) > (4l<<44)) (tmp.data[k]) += (3l<<44); 
+            if( (tmp.data[k] & 0x000f000000000000) > (4l<<48)) (tmp.data[k]) += (3l<<48);
+            if( (tmp.data[k] & 0x00f0000000000000) > (4l<<52)) (tmp.data[k]) += (3l<<52);
+            if( (tmp.data[k] & 0x0f00000000000000) > (4l<<56)) (tmp.data[k]) += (3l<<56);
+            if( (tmp.data[k] & 0xf000000000000000) > (4l<<60)) (tmp.data[k]) += (3l<<60);  
+        #endif
+        }
+        Bign_shift_left_one(&tmp,&tmp);
+    }
+
+    char *result = malloc((digits+2)*sizeof(char));
+    memset(result,'0',(digits+1)*sizeof(char));
+    result[digits+1]='\0';
+    char* ptr = result;
+
+    int k = tmp.size-1;
+    while(tmp.data[k]==0) k--; // get rid of 0 on the front
+    for(;k>=bn->size;k--){
+        
+        for(int j = TYPE_SIZE_BITS-4;j>=0;j-=4){
+            (*ptr) += ( (tmp.data[k] >> j) & 0xf);
+            ptr++;
+        }
+    }
+    (*ptr) = '\0';
+
+    //resize
+    result = realloc(result, (ptr - result + 1 ));
+
+    printf("\n");        
+    Bign_free_data(&tmp);
+    return result;
+}
+
 /* Prints the number as hexadecimal to the std out */
 void Bign_print_hex(Bign* bn)
 {
-    //char format[12];
-    //sprintf(format,"%%.0%lulx ",2*TYPE_SIZE);
-    //printf("format:   %s \n",format);
     for(int i = bn->size-1; i >= 0; i--){
         printf(BIGN_FORMAT_HEX_OUT,bn->data[i]);
     }
     printf("\n");
+}
+
+void Bign_print_decimal(const Bign *bn)
+{
+    
+    //space for Double dabble
+    const size_t bits = bn->size*TYPE_SIZE_BITS;
+    int digits = floor(bits*log10(2)) + 1;
+    size_t space = ceil(( bits + 4*digits ) / (double)TYPE_SIZE_BITS);
+
+    //printf("space %d\n",space);
+
+    Bign tmp;
+    Bign_init(&tmp, bn->size + space);
+    Bign_cpy(bn,&tmp);
+    
+    for(size_t i = 0; i < bits; i++){
+        for(int k = bn->size;k<tmp.size;k++){
+            if( (tmp.data[k] & 0x0f) > 4      ) (tmp.data[k]) += 3; // 0000 0011 low bits
+            if( (tmp.data[k] & 0xf0) > (4<<4) ) (tmp.data[k]) += (3<<4); // 0011 0000 high bits etc..
+        #if (BIGN_WORD_SIZE > 1)
+            if( (tmp.data[k] & 0x0f00) > (4<<8) ) (tmp.data[k]) += (3<<8);
+            if( (tmp.data[k] & 0xf000) > (4<<12)) (tmp.data[k]) += (3<<12); 
+        #endif
+        #if (BIGN_WORD_SIZE > 2)
+            if( (tmp.data[k] & 0x000f0000) > (4<<16)    ) (tmp.data[k]) += (3<<16);
+            if( (tmp.data[k] & 0x00f00000) > (4<<20)    ) (tmp.data[k]) += (3<<20);
+            if( (tmp.data[k] & 0x0f000000) > (4<<24)    ) (tmp.data[k]) += (3<<24);
+            if( (tmp.data[k] & 0xf0000000) > (4<<28)    ) (tmp.data[k]) += (3<<28); 
+        #endif
+        #if (BIGN_WORD_SIZE > 4)
+            if( (tmp.data[k] & 0x0000000f00000000) > (4l<<32)) (tmp.data[k]) += (3l<<32);
+            if( (tmp.data[k] & 0x000000f000000000) > (4l<<36)) (tmp.data[k]) += (3l<<36);
+            if( (tmp.data[k] & 0x00000f0000000000) > (4l<<40)) (tmp.data[k]) += (3l<<40);
+            if( (tmp.data[k] & 0x0000f00000000000) > (4l<<44)) (tmp.data[k]) += (3l<<44); 
+            if( (tmp.data[k] & 0x000f000000000000) > (4l<<48)) (tmp.data[k]) += (3l<<48);
+            if( (tmp.data[k] & 0x00f0000000000000) > (4l<<52)) (tmp.data[k]) += (3l<<52);
+            if( (tmp.data[k] & 0x0f00000000000000) > (4l<<56)) (tmp.data[k]) += (3l<<56);
+            if( (tmp.data[k] & 0xf000000000000000) > (4l<<60)) (tmp.data[k]) += (3l<<60);  
+        #endif
+        }
+        Bign_shift_left_one(&tmp,&tmp);
+    }
+  
+    int k = tmp.size-1;
+    while(tmp.data[k]==0) k--;
+    for(;k>=bn->size;k--){
+        printf(BIGN_FORMAT_HEX_OUT,tmp.data[k]);
+    }
+    printf(" \n");        
+    Bign_free_data(&tmp);
 }
 
 /*--------------------------------------------------

@@ -4,28 +4,10 @@
 #include <stdint.h>
 #include <limits.h>
 
-#define BIGN_WORD_SIZE 4
+#define BIGN_WORD_SIZE 8
 #include "DIY_BigNum.h"
 
 #include <math.h>
-char* Bign_to_decimal_str(const Bign *bn)
-{
-    // get number of digits
-    int digits = floor(bn->size*TYPE_SIZE_BITS*log10(2)) + 1;
-    printf("digits: %d\n",digits);
-
-    Bign tmp;
-    Bign_init(&tmp,0);
-    Bign_cpy(bn,&tmp);
-
-
-
-    char *result = malloc(digits*sizeof(char));
-    memset(result,'0',sizeof(result));
-    
-    Bign_free_data(&tmp);
-    return NULL;
-}
 
 int main(){
 
@@ -33,11 +15,11 @@ int main(){
 
     Bign n1, n2, n3;
     
-    Bign_init(&n1,16);
-    Bign_init(&n2,16);
-    Bign_init(&n3,16);
+    Bign_init(&n1,4);
+    Bign_init(&n2,4);
+    Bign_init(&n3,4);
 
-    Bign_from_hexstr(&n1, "0x123123123123123123123123123123123123123123");
+    Bign_from_hexstr(&n1, "0xffffffffffff");//"0x1234567890abcdeffedcba908765421");
     Bign_from_hexstr(&n2, "0x123123123123123123123123123123");
     Bign_from_hexstr(&n3, "0xfffffffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
 
@@ -53,7 +35,12 @@ int main(){
     printf("n1 + n2: \n");
     Bign_print_hex(&n3);
 
-    Bign_to_decimal_str(&n1);
+    Bign_print_decimal(&n1);
+
+    char *dec; 
+    dec = Bign_to_decimal_str(&n1);
+
+    printf("%s \n",dec);
 
     Bign_free_data(&n1);
     Bign_free_data(&n2);
