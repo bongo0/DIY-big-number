@@ -258,6 +258,78 @@ void Bign_from_hexstr(Bign* bn, char* str)
 
 }
 
+
+void Bign_from_decimal_str(Bign *bn, char *in_str)
+{
+    Bign_zero(bn);
+    int len = strlen(in_str)-1;
+    char *str = malloc(sizeof(char)*(len+1));
+    memcpy(str,in_str, len+1);
+
+    char *ptr_last = &str[len];
+    char *ptr = str;
+    while((*ptr) == '0'){
+        ++ptr;
+        --len;
+    } 
+
+                            //0,1,2,3,4,5,6,7,8,9  
+    static uint8_t odd[10] = {0,1,0,1,0,1,0,1,0,1};
+    uint8_t next_add = 0;
+    uint8_t add = 0;
+
+    size_t bits = TYPE_SIZE_BITS*bn->size;
+    size_t push_bit = 0;
+    size_t push_word = 0;
+
+    while(len>=0){
+    
+    // if last digit odd push 1 else push 0
+    if(odd[*ptr_last - '0']){
+        //set the push bit
+        push_word = push_bit / TYPE_SIZE_BITS;
+        bn->data[push_word] += (1L << (push_bit%TYPE_SIZE_BITS));
+    //printf("bit %lu word %lu shift<< %d\n",push_bit,push_word,push_bit%TYPE_SIZE_BITS);
+    }
+    ++push_bit;
+    // divide by two
+    for(int i = 0; i < len+1; i++){
+        add = next_add;
+        
+        // check oddness
+        //if( ptr[i] >= '0' && ptr[i] <= '9'){ 
+            if(odd[ptr[i]-'0']){
+                next_add = 5;
+            } else {
+                next_add = 0;
+            }
+       // } else {
+        //    return;
+        //}
+
+        //divide digit by two and add add
+        //printf("next digit: %c  add: %d, next_add: %d divide: %d, get: %d\n",str[i],add,next_add,(ptr[i]-'0')/2,(ptr[i]-'0')/2 + add);
+        ptr[i] = (ptr[i]-'0')/2 + add + '0';
+        //printf("sofar: %s\n",ptr);
+    }
+    add=0;next_add=0;
+    // rip leading zeros
+    while((*ptr) == '0'){
+        ++ptr;
+        --len;
+    }
+    if(len == 1 && (*ptr) == '0') break;
+    
+
+    //printf("last: %c   ",*ptr_last);
+    //printf("ey %s\n",ptr);
+
+    }
+
+    free(str);
+}
+
+
 /* Write the number as hexadecimal to string thats length is str_size */
 // should redo this
 void Bign_to_hexstr(Bign* bn, char* str, int str_size)
